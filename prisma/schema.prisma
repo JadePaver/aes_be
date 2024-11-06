@@ -7,66 +7,52 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model customers {
-  id       Int    @id @default(autoincrement())
-  fullname String @db.VarChar(155)
-}
-
-model delivery_events {
-  id               Int      @id @default(autoincrement())
-  delivery_name    String   @db.VarChar(55)
-  expected_item    String   @db.VarChar(555)
-  remarks          String?  @db.VarChar(255)
-  date_of_delivery DateTime @default(now()) @db.Date
-}
-
-model items {
-  id          Int      @id @default(autoincrement())
-  description String   @db.VarChar(255)
-  stock       Int
-  price       Int
-  type        String   @db.VarChar(155)
-  image       String?  @db.VarChar(255)
-  batch_date  DateTime @default(now()) @db.Date
-  is_remove   Int      @default(0)
-}
-
-model material_cost {
-  id               Int @id @default(autoincrement())
-  product_item_id  Int
-  material_item_id Int
-  quantity         Int
-}
-
-model purchase_order {
-  id                Int       @id @default(autoincrement())
-  receipt           String    @db.VarChar(155)
-  costumer_id       Int?
-  invoice_id        Int?
-  status            String    @db.VarChar(55)
-  total_amount      Float
-  date_of_purchased DateTime? @default(dbgenerated("(curdate())")) @db.Date
-
-  @@index([costumer_id], map: "costumer_id")
-  @@index([invoice_id], map: "invoice_id")
-}
-
-model purchased_furnitures {
-  id             Int       @id @default(autoincrement())
-  po_id          Int
-  item_id        Int
-  quantity       Int
-  price          Float
-  purchased_date DateTime? @default(dbgenerated("(curdate())")) @db.Date
-
-  @@index([item_id], map: "item_id")
-  @@index([po_id], map: "po_id")
-}
-
 model users {
   id           Int      @id @default(autoincrement())
-  username     String   @db.VarChar(55)
+  user_code    String?  @db.VarChar(55)
+  role_id      Int?
+  fName        String   @db.VarChar(55)
+  lName        String   @db.VarChar(55)
+  mName        String   @db.VarChar(55)
+  ext_name     String?  @db.VarChar(55)
+  birthDate    DateTime @db.Date
+  sex_id       Int?
+  contact      String   @db.VarChar(55)
+  email        String   @db.VarChar(55)
+  username     String   @unique @db.VarChar(55)
   password     String   @db.VarChar(255)
-  role         String   @db.VarChar(155)
-  date_created DateTime @default(now()) @db.Date
+  isRemove     Int      @default(0) @db.TinyInt
+  dateModified DateTime @default(now()) @db.DateTime(0)
+  dateCreated  DateTime @default(now()) @db.DateTime(0)
+  
+  profile_image profile_image?
+  role          roles?        @relation(fields: [role_id], references: [id])
+  sex            sex_tbl?      @relation(fields: [sex_id], references: [id])
+}
+
+model roles {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(55)
+  code String @db.VarChar(55)
+  users users[]
+}
+
+model profile_image {
+  id      Int    @id @default(autoincrement())
+  user_id Int?   @unique
+  users   users?  @relation(fields: [user_id], references: [id])
+  label   String @db.VarChar(255)
+  file    String @db.VarChar(255)
+}
+
+model sex_tbl {
+  id    Int    @id @default(autoincrement())
+  label String @db.VarChar(155)
+  users users[]
+}
+
+model archive_codes {
+  id      Int    @id @default(autoincrement())
+  code    String @unique @db.VarChar(155)
+  user_id Int?   @unique
 }

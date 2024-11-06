@@ -3,24 +3,25 @@ import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
 import os from "os";
+import userRoutes from "./routes/userRoutes.js"
+import roleRoutes from "./routes/roleRoutes.js"
+import sexRoutes from "./routes/sexRoute.js"
 
 dotenv.config();
 
 const app = express();
 
 const networkInterfaces = os.networkInterfaces();
-let localIp = null;
+let localIP = null;
 
 for (const interfaceKey in networkInterfaces) {
   for (const network of networkInterfaces[interfaceKey]) {
     if (network.family === "IPv4" && !network.internal) {
-      localIp = network.address;
+      localIP = network.address;
       break;
     }
   }
 }
-
-console.log("IPADDRESS:", localIp);
 
 app.use(
   cors({
@@ -29,9 +30,13 @@ app.use(
 );
 app.use(bodyParser.json());
 
-app.get("/test", (req, res) => {
-  res.send({ message: "HIeeasad" });
+app.get("/getserver_ip", (req, res) => {
+  res.send( {localIP} );
 });
+
+app.use("/users",userRoutes)
+app.use("/roles",roleRoutes)
+app.use("/sex",sexRoutes)
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
