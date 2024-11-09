@@ -6,6 +6,7 @@ import os from "os";
 import userRoutes from "./routes/userRoutes.js"
 import roleRoutes from "./routes/roleRoutes.js"
 import sexRoutes from "./routes/sexRoute.js"
+import prof_imageRoutes from "./routes/prof_imageRoutes.js"
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.get("/getserver_ip", (req, res) => {
 app.use("/users",userRoutes)
 app.use("/roles",roleRoutes)
 app.use("/sex",sexRoutes)
+app.use("/prof_img",prof_imageRoutes)
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
