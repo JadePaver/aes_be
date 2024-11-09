@@ -3,11 +3,102 @@ import prisma from "../prismaClient.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-// Get all users
+export const updateProfileDetals = async (req, res) => {
+  const { id } = req.body; // Use the ID to find the user
+  const {
+    user_code,
+    role_id,
+    fName,
+    lName,
+    mName,
+    ext_name,
+    birthDate,
+    sex_id,
+    contact,
+    email,
+    username,
+    password,
+    profile_image,
+  } = req.body;
+
+  try {
+    // Update user in the database
+    const updatedUser = await prisma.users.update({
+      where: { id: Number(id) },
+      data: {
+        role_id,
+        fName,
+        lName,
+        mName,
+        ext_name,
+        birthDate: new Date(birthDate), // Ensure date format is compatible
+        sex_id,
+        contact,
+        email,
+        username,
+        password,
+        dateModified: new Date(), // Update modification timestamp
+        profile_image: {
+          upsert: {
+            create: {
+              label: profile_image?.label,
+              file: profile_image?.file,
+            },
+            update: {
+              label: profile_image?.label,
+              file: profile_image?.file,
+            },
+          },
+        },
+      },
+      include: {
+        role: true,
+        sex: true,
+        profile_image: true,
+      },
+    });
+
+    res.status(200).json({
+      message: "User profile updated successfully",
+      updatedUser,
+    });
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    res.status(500).json({ error: "Failed to update user profile details" });
+  }
+};
+
+
+export const isUsernameTaken = async (req, res) => {
+  const { username } = req.body;
+  const { id } = req.params;
+
+  try {
+    // Check if any user has the specified username, excluding the current user
+    const isUsernameExist = await prisma.users.findFirst({
+      where: {
+        username: username,
+        id: {
+          not: parseInt(id), // Exclude the current user by ID
+        },
+      },
+    });
+
+    if (isUsernameExist) {
+      return res.status(200).json({ available: false, message: "Username is already taken." });
+    }
+
+    res.status(200).json({ available: true, message: "Username is available." });
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    res.status(500).json({ error: "Error checking username availability." });
+  }
+};
+
+
 export const getProfileDetailByID = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("id:", id);
 
     const user = await prisma.users.findUnique({
       where: {
@@ -37,7 +128,6 @@ export const getProfileDetailByID = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    console.log("user:", user);
     res.send(user);
   } catch (error) {
     console.error(error); // Log the error for debugging
@@ -67,6 +157,13 @@ export const loginUser = async (req, res) => {
   try {
     const user = await prisma.users.findUnique({
       where: { username },
+      include: {
+        profile_image: {
+          select: {
+            file: true,
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -78,17 +175,26 @@ export const loginUser = async (req, res) => {
       return res.status(401).send({ error: "Invalid username or password" });
     }
 
+    const tokenPayload = {
+      id: user.id,
+      username: user.username,
+      role: user.role_id,
+      ...(user.profile_image && { profileImage: user.profile_image.file }), // Include profileImage if it exists
+    };
     // Generate JWT token
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role_id },
-      process.env.JWT_SECRET_TOKEN,
-      { expiresIn: "1h" }
-    );
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET_TOKEN, {
+      expiresIn: "1h",
+    });
 
     // Send the response with token and user details (excluding password)
     res.status(200).json({
       message: "Login successful",
-      user: { id: user.id, username: user.username, role: user.role_id },
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role_id,
+        ...(user.profile_image && { profileImage: user.profile_image.file }),
+      },
       token,
     });
   } catch (error) {
@@ -216,13 +322,13 @@ export const changePassword = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     // Compare the current password with the hashed password in the database
     const isPasswordMatch = await bcrypt.compare(current, user.password);
-      if (!isPasswordMatch) {
-      return res.status(400).json({ error: 'Current password is incorrect' });
+    if (!isPasswordMatch) {
+      return res.status(400).json({ error: "Current password is incorrect" });
     }
 
     // Hash the new password
@@ -236,10 +342,9 @@ export const changePassword = async (req, res) => {
       },
     });
     // Send success response
-    res.status(200).send({ message: 'Password updated successfully' });
-
+    res.status(200).send({ message: "Password updated successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to change password' });
+    res.status(500).json({ error: "Failed to change password" });
   }
 };
