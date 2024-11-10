@@ -3,6 +3,67 @@ import prisma from "../prismaClient.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
+export const toggleLockUser = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Fetch the current user to get the current isLocked value
+    const user = await prisma.users.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Toggle the isLocked value
+    const updatedIsLocked = user.isLocked === 1 ? 0 : 1;
+
+    // Update the user's isLocked status
+    const updatedUser = await prisma.users.update({
+      where: { id: parseInt(id) },
+      data: {
+        isLocked: updatedIsLocked,
+        dateModified: new Date(), // Update the modification date
+      },
+    });
+
+    res.status(200).json({
+      message:
+        updatedIsLocked === 1
+          ? `${updatedUser?.username} locked successfully`
+          : `${updatedUser?.username} unlocked successfully`,
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    res.status(500).json({ error: "Failed to toggle user lock status" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const defaultPassword = await bcrypt.hash("123456789", 10);
+
+    const updatedUser = await prisma.users.update({
+      where: { id: parseInt(id) },
+      data: { password: defaultPassword, dateModified: new Date() },
+    });
+
+    res
+      .status(200)
+      .json({
+        message: `${updatedUser.fName} ${updatedUser.lName} password reset successfully`,
+        user: updatedUser,
+      });
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    res.status(500).json({ error: "Failed to reset user password" });
+  }
+};
+
 export const updateProfileDetals = async (req, res) => {
   const { id } = req.body; // Use the ID to find the user
   const {
@@ -68,7 +129,6 @@ export const updateProfileDetals = async (req, res) => {
   }
 };
 
-
 export const isUsernameTaken = async (req, res) => {
   const { username } = req.body;
   const { id } = req.params;
@@ -85,16 +145,19 @@ export const isUsernameTaken = async (req, res) => {
     });
 
     if (isUsernameExist) {
-      return res.status(200).json({ available: false, message: "Username is already taken." });
+      return res
+        .status(200)
+        .json({ available: false, message: "Username is already taken." });
     }
 
-    res.status(200).json({ available: true, message: "Username is available." });
+    res
+      .status(200)
+      .json({ available: true, message: "Username is available." });
   } catch (error) {
     console.error(error); // Log the error for debugging
     res.status(500).json({ error: "Error checking username availability." });
   }
 };
-
 
 export const getProfileDetailByID = async (req, res) => {
   try {
@@ -146,6 +209,8 @@ export const getAllUsers = async (req, res) => {
 };
 
 export const loginUser = async (req, res) => {
+  console.log("loging in");
+
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -155,6 +220,7 @@ export const loginUser = async (req, res) => {
   }
 
   try {
+    console.log("loging in");
     const user = await prisma.users.findUnique({
       where: { username },
       include: {
@@ -167,7 +233,9 @@ export const loginUser = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).send({ error: "Invalid username or password" });
+      return res
+        .status(401)
+        .send({ error: "Invalid usernaasfasfsme or password" });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -186,6 +254,7 @@ export const loginUser = async (req, res) => {
       expiresIn: "1h",
     });
 
+    console.log("apples");
     // Send the response with token and user details (excluding password)
     res.status(200).json({
       message: "Login successful",
@@ -286,6 +355,7 @@ export const registUser = async (req, res) => {
         password: hashedPassword,
       },
     });
+    console.log("newUser:", newUser);
 
     await prisma.archive_codes.update({
       where: { code },
@@ -298,7 +368,7 @@ export const registUser = async (req, res) => {
       process.env.JWT_SECRET_TOKEN,
       { expiresIn: "1h" }
     );
-
+    console.log("token:", token);
     // Send response
     res.status(201).json({
       message: "User registered successfully",
