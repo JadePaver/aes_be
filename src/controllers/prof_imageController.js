@@ -2,6 +2,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import prisma from "../prismaClient.js";
+import jwt from "jsonwebtoken";
+
 
 // Set up Multer storage to define where and how to store the uploaded files
 const storage = multer.diskStorage({
@@ -26,35 +28,48 @@ export const uploadImage = upload.single("profileImage"); // Handle single image
 // Controller function to save the file path to the database
 export const uploadImageHandler = async (req, res) => {
   try {
-    // Check if the file exists
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    // Get user ID from params
     const { id: userId } = req.params;
+    const newFilename = req.file.filename;
+    const imagePath = path.join("/uploads", newFilename);
 
-    // Save the file path
-    const imagePath = path.join("/uploads", req.file.filename);
-    console.log("req:", req.file)
-
-    // Upsert (insert or update) profile image in the `profile_image` table for this user
+    // Update or insert profile image record
     const profileImage = await prisma.profile_image.upsert({
       where: { user_id: Number(userId) },
-      update: {
-        file: req.file.filename, // Update existing image path
-      },
+      update: { file: newFilename },
       create: {
         user_id: Number(userId),
         label: "Profile Image",
-        file: req.file.filename, // Insert new image path
+        file: newFilename,
       },
     });
 
+    // Fetch the updated user info
+    const user = await prisma.users.findUnique({
+      where: { id: Number(userId) },
+      include: { profile_image: true },
+    });
+
+    // Prepare new token payload
+    const tokenPayload = {
+      id: user.id,
+      username: user.username,
+      role: user.role_id,
+      profileImage: user.profile_image.file, // Use updated profile image filename
+    };
+
+    // Sign new token
+    const newToken = jwt.sign(tokenPayload, process.env.JWT_SECRET_TOKEN, {
+      expiresIn: "1h",
+    });
+
     res.status(200).json({
-      message: "Profile image uploaded successfully",
-      imagePath: req.file.filename,
-      profileImage,
+      message: "Profile image uploaded and token updated successfully",
+      newToken, // Return the new token to the client
+      imagePath: newFilename,
     });
   } catch (error) {
     console.error("Error uploading image:", error);
