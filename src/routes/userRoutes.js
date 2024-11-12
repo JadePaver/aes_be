@@ -6,7 +6,7 @@ import { isUsernameTaken,getAllUsers,registUser,loginUser,getProfileDetailByID, 
 const router = express.Router();
 
 // Get all users
-router.post("/getAll/:id", getAllUsers);
+router.post("/getAll/:id",authenticateToken, getAllUsers);
 
 // Get a single user by ID
 router.post("/register", registUser);
