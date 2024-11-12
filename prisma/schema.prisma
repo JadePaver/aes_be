@@ -25,30 +25,61 @@ model users {
   isLocked     Int      @default(0) @db.TinyInt
   dateModified DateTime @default(now()) @db.DateTime(0)
   dateCreated  DateTime @default(now()) @db.DateTime(0)
-  
-  profile_image profile_image?
-  role          roles?        @relation(fields: [role_id], references: [id])
-  sex            sex_tbl?      @relation(fields: [sex_id], references: [id])
+
+  profile_image      profile_image?
+  role               roles?              @relation(fields: [role_id], references: [id])
+  sex                sex_tbl?            @relation(fields: [sex_id], references: [id])
+  assigned_classroom assigned_classroom?
+  graduate_records   graduate_records?
+}
+
+model graduate_records {
+  id              Int      @id @default(autoincrement())
+  user_id         Int      @unique
+  graduation_date DateTime
+  date_added      DateTime @default(now())
+
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model classrooms {
+  id        Int    @id @default(autoincrement())
+  code      String @unique @db.VarChar(155)
+  name      String @db.VarChar(155)
+  grade     Int 
+  year      Int 
+  isRemoved Int    @default(0) @db.TinyInt
+
+  assignedClassrooms assigned_classroom[]
+  @@unique([name, year, grade]) // Ensures uniqueness of classroom based on name, year, and grade
+}
+
+model assigned_classroom {
+  class_id Int @unique
+  user_id  Int @unique
+
+  user      users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  classroom classrooms @relation(fields: [class_id], references: [id], onDelete: Cascade)
 }
 
 model roles {
-  id   Int    @id @default(autoincrement())
-  name String @db.VarChar(55)
-  code String @db.VarChar(55)
+  id    Int     @id @default(autoincrement())
+  name  String  @db.VarChar(55)
+  code  String  @db.VarChar(55)
   users users[]
 }
 
 model profile_image {
   id      Int    @id @default(autoincrement())
   user_id Int?   @unique
-  users   users?  @relation(fields: [user_id], references: [id])
+  users   users? @relation(fields: [user_id], references: [id])
   label   String @db.VarChar(255)
   file    String @db.VarChar(255)
 }
 
 model sex_tbl {
-  id    Int    @id @default(autoincrement())
-  label String @db.VarChar(155)
+  id    Int     @id @default(autoincrement())
+  label String  @db.VarChar(155)
   users users[]
 }
 
