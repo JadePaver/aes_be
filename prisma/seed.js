@@ -20,6 +20,7 @@ async function main() {
   });
 
   //Insert Users
+  // Seed users
   await prisma.users.createMany({
     data: [
       {
@@ -42,6 +43,7 @@ async function main() {
         dateCreated: "2024-11-10T05:26:20.000Z",
       },
       {
+        id: 2,
         user_code: null,
         role_id: 5,
         fName: "John",
@@ -63,31 +65,32 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Insert archive_code
+  // Insert archive codes
   await prisma.archive_codes.createMany({
     data: [
-      {
-        code: "CODE12345",
-        user_id: null, // Assuming user with ID 1 exists
-      },
-      {
-        code: "CODE67890",
-        user_id: null, // Assuming user with ID 2 exists
-      },
-      {
-        code: "CODEABCDE",
-        user_id: null, // Assuming user with ID 3 exists
-      },
-      {
-        code: "CODEFGHIJ",
-        user_id: null, // No user associated
-      },
-      {
-        code: "CODEKLMNO",
-        user_id: null, // No user associated
-      },
+      { code: "CODE12345", user_id: null },
+      { code: "CODE67890", user_id: null },
+      { code: "CODEABCDE", user_id: null },
+      { code: "CODEFGHIJ", user_id: null },
+      { code: "CODEKLMNO", user_id: null },
     ],
   });
+
+  // Assign archive codes to users
+  const users = await prisma.users.findMany(); // Fetch all users
+  const archiveCodes = await prisma.archive_codes.findMany({
+    where: { user_id: null },
+    take: users.length, // Ensure we have enough archive codes
+  });
+
+  for (let i = 0; i < users.length; i++) {
+    if (archiveCodes[i]) {
+      await prisma.archive_codes.update({
+        where: { code: archiveCodes[i].code },
+        data: { user_id: users[i].id },
+      });
+    }
+  }
 
   //Insert Classrooms
   await prisma.classrooms.createMany({
