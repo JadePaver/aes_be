@@ -8,6 +8,7 @@ import roleRoutes from "./routes/roleRoutes.js"
 import sexRoutes from "./routes/sexRoute.js"
 import prof_imageRoutes from "./routes/prof_imageRoutes.js"
 import classroomRoutes from "./routes/classroomRoutes.js"
+import subjectRoutes from "./routes/subjectsRoutes.js"
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use("/roles",roleRoutes)
 app.use("/sex",sexRoutes)
 app.use("/prof_img",prof_imageRoutes)
 app.use("/classrooms",classroomRoutes)
+app.use("/subjects",subjectRoutes)
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

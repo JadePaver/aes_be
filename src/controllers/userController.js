@@ -52,12 +52,10 @@ export const resetPassword = async (req, res) => {
       data: { password: defaultPassword, dateModified: new Date() },
     });
 
-    res
-      .status(200)
-      .json({
-        message: `${updatedUser.fName} ${updatedUser.lName} password reset successfully`,
-        user: updatedUser,
-      });
+    res.status(200).json({
+      message: `${updatedUser.fName} ${updatedUser.lName} password reset successfully`,
+      user: updatedUser,
+    });
   } catch (error) {
     console.error(error); // Log the error for debugging
     res.status(500).json({ error: "Failed to reset user password" });
@@ -200,10 +198,18 @@ export const getProfileDetailByID = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await prisma.users.findMany(); // Use the correct model name 'users'
+    const users = await prisma.users.findMany({
+      include: {
+        assigned_classroom: {
+          include: {
+            classroom: true,
+          },
+        },
+      },
+    });
     res.json(users);
   } catch (error) {
-    console.error(error); // Log the error for debugging
+    console.error(error);
     res.status(500).json({ error: "Failed to fetch users" });
   }
 };

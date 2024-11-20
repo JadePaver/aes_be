@@ -9,7 +9,8 @@ import {
   getClassMembers,
   removeMember,
   addMember,
-  transferStudents
+  transferStudents,
+  assignUser,
 } from "../controllers/classroomController.js";
 
 const router = express.Router();
@@ -21,6 +22,11 @@ router.post("/update/:class_id", authenticateToken, updateClassroom);
 router.post("/get_members/:class_id", authenticateToken, getClassMembers);
 router.post("/remove_member/:user_id", authenticateToken, removeMember);
 router.post("/add_member/:user_code", authenticateToken, addMember);
-router.post("/transfer_students/:class_id", authenticateToken, transferStudents);
+router.post(
+  "/transfer_students/:class_id",
+  authenticateToken,
+  transferStudents
+);
+router.post("/assign_user/:class_id", authenticateToken, assignUser);
 
 export default router;
