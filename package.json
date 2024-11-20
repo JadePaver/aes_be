@@ -31,6 +31,6 @@
     "prisma": "^5.21.1"
   },
   "prisma": {
-    "seed": "node prisma/seed.js"
+    "seed": "node seeders/seed.js"
   }
 }
