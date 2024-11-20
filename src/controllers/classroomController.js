@@ -1,5 +1,39 @@
 import prisma from "../prismaClient.js";
 
+export const assignUser = async (req, res) => {
+  const { class_id } = req.params;
+  const { id: user_id } = req.body;
+
+  try {
+    // Perform an upsert operation on the assigned_classroom table
+    const parsedClassId = parseInt(class_id, 10);
+
+    const updatedAssignment = await prisma.assigned_classroom.upsert({
+      where: {
+        user_id, // Ensure uniqueness by user_id
+      },
+      update: {
+        class_id: parsedClassId, // Update the class_id if the user is already assigned
+      },
+      create: {
+        user_id,
+        class_id: parsedClassId,
+      },
+    });
+
+    res.status(200).send({
+      message: "User assigned successfully",
+      data: updatedAssignment,
+    });
+  } catch (error) {
+    console.error("Error assigning user:", error);
+    res.status(500).send({
+      message: "An error occurred while assigning the user",
+      error: error.message,
+    });
+  }
+};
+
 export const transferStudents = async (req, res) => {
   try {
     const { class_id } = req.params;
@@ -89,13 +123,16 @@ export const addMember = async (req, res) => {
 export const removeMember = async (req, res) => {
   try {
     const { user_id } = req.params;
+    console.log("user_id_remove:", user_id);
 
     const updatedAssignment = await prisma.assigned_classroom.update({
       where: {
         user_id: parseInt(user_id),
       },
       data: {
-        class_id: null,
+        classroom: {
+          disconnect: true, // This will remove the association with the classroom
+        },
       },
     });
 

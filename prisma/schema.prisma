@@ -26,19 +26,20 @@ model users {
   dateModified DateTime @default(now()) @db.DateTime(0)
   dateCreated  DateTime @default(now()) @db.DateTime(0)
 
-  profile_image       profile_image?
-  role                roles?               @relation(fields: [role_id], references: [id])
-  sex                 sex_tbl?             @relation(fields: [sex_id], references: [id])
+  profile_image      profile_image?
+  role               roles?               @relation(fields: [role_id], references: [id])
+  sex                sex_tbl?             @relation(fields: [sex_id], references: [id])
   assigned_classroom assigned_classroom[]
-  graduate_records    graduate_records?
-  archive_codes     archive_codes[]  @relation("UserArchiveCodes")
+  graduate_records   graduate_records?
+  archive_codes      archive_codes[]      @relation("UserArchiveCodes")
+  assigned_subject   assigned_subject?
 }
 
 model archive_codes {
   id      Int    @id @default(autoincrement())
   code    String @unique @db.VarChar(155)
-  user_id Int?   @unique 
-  user     users?  @relation(fields: [user_id], references: [id], onDelete: Cascade, name: "UserArchiveCodes")
+  user_id Int?   @unique
+  user    users? @relation(fields: [user_id], references: [id], onDelete: Cascade, name: "UserArchiveCodes")
 }
 
 model classrooms {
@@ -50,20 +51,42 @@ model classrooms {
   isRemoved Int    @default(0) @db.TinyInt
 
   assignedClassroom assigned_classroom[]
+  subjects subjects[]
+
 
   @@unique([name, year, grade])
 }
 
 model assigned_classroom {
-  user_id  Int         @unique
-  class_id Int
+  user_id  Int  @unique
+  class_id Int?
 
-  user      users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  classroom classrooms @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  user      users       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  classroom classrooms? @relation(fields: [class_id], references: [id], onDelete: Cascade)
 }
 
+model subjects {
+  id               Int                @id @default(autoincrement())
+  code             String             @db.VarChar(55)
+  name             String             @db.VarChar(155)
+  year             String             @db.VarChar(55)
+  class_id         Int?   
+  isRemoved Int    @default(0) @db.TinyInt
+  dateCreated      DateTime           @default(now()) @db.DateTime(0)
 
+  classroom        classrooms?        @relation(fields: [class_id], references: [id], onDelete: SetNull)
+  assigned_subject assigned_subject[]
 
+   @@unique([name, year, class_id])
+}
+
+model assigned_subject {
+  user_id  Int  @unique
+  class_id Int?
+
+  user    users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  subject subjects? @relation(fields: [class_id], references: [id], onDelete: Cascade)
+}
 
 
 model graduate_records {
@@ -95,3 +118,4 @@ model sex_tbl {
   label String  @db.VarChar(155)
   users users[]
 }
+
