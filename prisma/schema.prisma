@@ -32,7 +32,7 @@ model users {
   assigned_classroom assigned_classroom[]
   graduate_records   graduate_records?
   archive_codes      archive_codes[]      @relation("UserArchiveCodes")
-  assigned_subject   assigned_subject?
+  assigned_subject   assigned_subject[]
 }
 
 model archive_codes {
@@ -51,8 +51,7 @@ model classrooms {
   isRemoved Int    @default(0) @db.TinyInt
 
   assignedClassroom assigned_classroom[]
-  subjects subjects[]
-
+  subjects          subjects[]
 
   @@unique([name, year, grade])
 }
@@ -66,28 +65,31 @@ model assigned_classroom {
 }
 
 model subjects {
-  id               Int                @id @default(autoincrement())
-  code             String             @db.VarChar(55)
-  name             String             @db.VarChar(155)
-  year             String             @db.VarChar(55)
-  class_id         Int?   
-  isRemoved Int    @default(0) @db.TinyInt
-  dateCreated      DateTime           @default(now()) @db.DateTime(0)
+  id          Int      @id @default(autoincrement())
+  code        String   @db.VarChar(55)
+  name        String   @db.VarChar(155)
+  year        String   @db.VarChar(55)
+  class_id    Int?
+  isRemoved   Int      @default(0) @db.TinyInt
+  dateCreated DateTime @default(now()) @db.DateTime(0)
 
   classroom        classrooms?        @relation(fields: [class_id], references: [id], onDelete: SetNull)
   assigned_subject assigned_subject[]
 
-   @@unique([name, year, class_id])
+  @@unique([name, year, class_id])
 }
 
 model assigned_subject {
-  user_id  Int  @unique
-  class_id Int?
+  user_id     Int
+  subject_id  Int
+  dateCreated DateTime @default(now()) @db.DateTime(0)
 
   user    users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  subject subjects? @relation(fields: [class_id], references: [id], onDelete: Cascade)
-}
+  subject subjects? @relation(fields: [subject_id], references: [id], onDelete: Cascade)
 
+  // Composite unique constraint ensures no duplicates of the same user_id and subject_id combination
+  @@unique([user_id, subject_id]) // This enforces the unique constraint on the combination of user_id and subject_id
+}
 
 model graduate_records {
   id              Int      @id @default(autoincrement())
@@ -118,4 +120,3 @@ model sex_tbl {
   label String  @db.VarChar(155)
   users users[]
 }
-

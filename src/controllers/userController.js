@@ -77,7 +77,6 @@ export const updateProfileDetals = async (req, res) => {
     email,
     username,
     password,
-    profile_image,
   } = req.body;
 
   try {
@@ -97,18 +96,6 @@ export const updateProfileDetals = async (req, res) => {
         username,
         password,
         dateModified: new Date(), // Update modification timestamp
-        profile_image: {
-          upsert: {
-            create: {
-              label: profile_image?.label,
-              file: profile_image?.file,
-            },
-            update: {
-              label: profile_image?.label,
-              file: profile_image?.file,
-            },
-          },
-        },
       },
       include: {
         role: true,
