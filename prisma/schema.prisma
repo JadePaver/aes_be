@@ -33,6 +33,7 @@ model users {
   graduate_records   graduate_records?
   archive_codes      archive_codes[]      @relation("UserArchiveCodes")
   assigned_subject   assigned_subject[]
+  module_isRead       module_isRead[]
 }
 
 model archive_codes {
@@ -64,17 +65,53 @@ model assigned_classroom {
   classroom classrooms? @relation(fields: [class_id], references: [id], onDelete: Cascade)
 }
 
+model modules {
+  id            Int            @id @default(autoincrement())
+  subject_id    Int
+  name          String         @db.VarChar(155)
+  description   String         @db.VarChar(255)
+  is_removed    Int            @default(0) @db.TinyInt
+  availableDate DateTime
+  subject       subjects       @relation(fields: [subject_id], references: [id], onDelete: Cascade)
+  moduleFiles   module_files[]
+
+  @@unique([name, subject_id])
+  module_isRead module_isRead[]
+}
+
+model module_files {
+  id        Int     @id @default(autoincrement())
+  module_id Int
+  file      String  @db.VarChar(255)
+  label     String  @db.VarChar(255)
+  module    modules @relation(fields: [module_id], references: [id], onDelete: Cascade)
+
+  @@unique([file, label, module_id])
+}
+
+model module_isRead {
+  module_id Int
+  user_id   Int
+  isRead    Int @default(0) @db.TinyInt
+
+  module    modules @relation(fields: [module_id], references: [id], onDelete: Cascade)
+  user    users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([module_id, user_id])
+}
+
 model subjects {
   id          Int      @id @default(autoincrement())
   code        String   @db.VarChar(55)
   name        String   @db.VarChar(155)
   year        String   @db.VarChar(55)
   class_id    Int?
-  isRemoved   Int      @default(0) @db.TinyInt
+  is_removed  Int      @default(0) @db.TinyInt
   dateCreated DateTime @default(now()) @db.DateTime(0)
 
   classroom        classrooms?        @relation(fields: [class_id], references: [id], onDelete: SetNull)
   assigned_subject assigned_subject[]
+  modules          modules[]
 
   @@unique([name, year, class_id])
 }

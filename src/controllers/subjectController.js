@@ -1,9 +1,95 @@
 import prisma from "../prismaClient.js";
 
+export const subjectDetails = async (req, res) => {
+  try {
+    // console.log("params:", req.params)
+    res.send({message:"sasfasf"})
+    
+  } catch (error) {
+    console.error("Error fetching subject details:", error);
+    res.status(500).json({ error: "Failed to fetch subject details." });
+  }
+}
+
+export const getAssigned = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    // Validate the user_id
+    if (!user_id) {
+      return res.status(400).json({ error: "User ID is required." });
+    }
+
+    // Fetch subjects assigned to the user
+    const assignedSubjects = await prisma.assigned_subject.findMany({
+      where: {
+        user_id: parseInt(user_id),
+      },
+      include: {
+        subject: true, // Include subject details
+      },
+    });
+
+    // If no subjects are found, return an appropriate response
+    if (assignedSubjects.length === 0) {
+      return res.status(404).json({ message: "No subjects found for this user." });
+    }
+
+    // Extract subject IDs
+    const subjectIds = assignedSubjects.map((assignment) => assignment.subject_id);
+
+    // Fetch users with role_id = 3 (instructors) assigned to these subjects
+    const instructors = await prisma.assigned_subject.findMany({
+      where: {
+        subject_id: {
+          in: subjectIds,
+        },
+        user: {
+          role_id: 3, // Role ID for instructors
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fName: true,
+            lName: true,
+            mName: true,
+            ext_name: true,
+            email: true,
+            role: true, // Optional: to include role details
+          },
+        },
+        subject: true, // Include subject details
+      },
+    });
+
+    // Format the response
+    const formattedSubjects = assignedSubjects.map((assignment) => {
+      const subjectInstructors = instructors
+        .filter((instructor) => instructor.subject_id === assignment.subject_id)
+        .map((instructor) => instructor.user);
+
+      return {
+        ...assignment.subject,
+        instructors: subjectInstructors,
+      };
+    });
+
+    console.log("formattedSubjects:",formattedSubjects)
+    res.status(200).json(formattedSubjects);
+  } catch (error) {
+    console.error("Error fetching assigned subjects:", error);
+    res.status(500).json({ error: "Failed to fetch assigned subjects." });
+  }
+};
+
+
+
 export const enrollUser = async (req, res) => {
   try {
     const { user_code } = req.params;
-    const { id: subject_id,name:subject_name, year:subject_year } = req.body; // Extract subject_id from the request body
+    const { id: subject_id, name: subject_name, year: subject_year } = req.body; // Extract subject_id from the request body
     // Find the user associated with the archive code
     const archiveCodeRecord = await prisma.archive_codes.findUnique({
       where: { code: user_code },
@@ -47,15 +133,15 @@ export const enrollUser = async (req, res) => {
           },
         },
       });
-    
+
       if (existingEnrollment) {
-        const classroomName = existingEnrollment?.subject?.classroom?.name || "Unknown";
+        const classroomName =
+          existingEnrollment?.subject?.classroom?.name || "Unknown";
         return res.status(400).json({
           error: `This student is already enrolled in the same subject name and year in classroom ${classroomName}.`,
         });
       }
     }
-    
 
     // Check if the subject is already assigned to the user
     const existingAssignment = await prisma.assigned_subject.findUnique({
@@ -345,8 +431,8 @@ export const removeMember = async (req, res) => {
     const { user_id } = req.params; // Extract `user_id` from route parameters
     const { id: subject_id } = req.body; // Extract `subject_id` from request body
 
-    console.log("params:", req.params)
-    console.log("body:", req.body)
+    console.log("params:", req.params);
+    console.log("body:", req.body);
     // Ensure both user_id and subject_id are provided
     if (!user_id || !subject_id) {
       return res
@@ -362,7 +448,7 @@ export const removeMember = async (req, res) => {
       },
     });
 
-    console.log("removedEntry:",removedEntry)
+    console.log("removedEntry:", removedEntry);
 
     // Check if the entry was removed
     if (removedEntry.count === 0) {
