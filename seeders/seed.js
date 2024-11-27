@@ -5,6 +5,9 @@ import { seedUsers } from "./tables/users.js";
 import { seedArchive } from "./tables/archive_codes.js";
 import { seedClassrooms } from "./tables/classrooms.js";
 import { assignArchiveCodesToUsers } from "./assignArchiveCodes.js";
+import { assignedClassroomSeeder } from "./tables/assigned_classroomSeeder.js";
+import { subjectsSeeder } from "./tables/subjectSeeder.js";
+import { assignedSubjectsSeeder } from "./tables/assigned_subjectSeeder.js";
 
 async function main() {
   // Insert predefined data for roles
@@ -31,6 +34,15 @@ async function main() {
   //Insert Classrooms
   await seedClassrooms();
   console.log("Classroom seeded successfully.");
+
+  await assignedClassroomSeeder();
+  console.log("assignedClassroom seeded successfully.");
+  
+  await subjectsSeeder();
+  console.log("subjects seeded successfully.");
+
+  await assignedSubjectsSeeder();
+  console.log("assignedSubjects seeded successfully.");
 }
 
 main()
