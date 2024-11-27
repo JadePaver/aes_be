@@ -2,14 +2,31 @@ import prisma from "../prismaClient.js";
 
 export const subjectDetails = async (req, res) => {
   try {
-    // console.log("params:", req.params)
-    res.send({message:"sasfasf"})
-    
+    const { subject_id } = req.params;
+
+    // Fetch subject details, including related classroom and modules
+    const subject = await prisma.subjects.findUnique({
+      where: {
+        id: parseInt(subject_id), // Convert subject_id to an integer
+      },
+      include: {
+        classroom: true, // Include classroom details
+        modules: true,   // Include related modules
+      },
+    });
+
+    // Check if the subject exists
+    if (!subject) {
+      return res.status(404).json({ error: "Subject not found." });
+    }
+
+    res.status(200).json(subject);
   } catch (error) {
     console.error("Error fetching subject details:", error);
     res.status(500).json({ error: "Failed to fetch subject details." });
   }
-}
+};
+
 
 export const getAssigned = async (req, res) => {
   try {

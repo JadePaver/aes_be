@@ -31,12 +31,6 @@ export const uploadModule = async (req, res, next) => {
     const uploadedFiles = req.files;
     const newModule = req.newModule;
 
-    console.log("inside upload:fi", req.files);
-    console.log("inside upload bo: ", req.body);
-    console.log("inside upload pa: ", req.params);
-    console.log("inside upload ne: ", newModule);
-    console.log("inside upload ne: ", req.user);
-
     try {
       // Loop through each uploaded file and save the file information in the database
       const moduleFilesData = uploadedFiles.map((file) => ({
@@ -123,11 +117,9 @@ export const create = async (req, res, next) => {
     });
 
     if (existingModule) {
-      return res
-        .status(409)
-        .json({
-          error: "Module with the same name already exists for this subject.",
-        });
+      return res.status(409).json({
+        error: "Module with the same name already exists for this subject.",
+      });
     }
 
     // Create the new module in the database
@@ -167,15 +159,14 @@ export const getBySubject = async (req, res) => {
     const modules = await prisma.modules.findMany({
       where: {
         subject_id: Number(subject_id),
-        is_removed: 0, 
+        is_removed: 0,
         availableDate: {
-          lte: new Date(), 
+          lte: new Date(),
         },
       },
     });
-    
+
     res.status(200).json(modules);
-    
   } catch (error) {
     console.error("Error in fetching modules:", error);
     res.status(500).json({ error: "Failed to fetch modules." });
@@ -190,16 +181,15 @@ export const getAttachedFiles = async (req, res) => {
     const moduleFiles = await prisma.module_files.findMany({
       where: { module_id: parseInt(module_id) },
     });
-
     // If no files are found, return a response indicating this
     if (!moduleFiles || moduleFiles.length === 0) {
-      return res.status(404).json({ message: 'No files found for this module' });
+      return res.json({ files: [] });
     }
 
     // Read each file from the filesystem and convert it to a base64 string
     const transformedFiles = moduleFiles.map((file) => {
-      const filePath = path.resolve('uploads/modules', file.file);
-    
+      const filePath = path.resolve("uploads/modules", file.file);
+
       // Check if the file exists before reading it
       if (!fs.existsSync(filePath)) {
         console.error("File not found:", filePath);
@@ -208,21 +198,22 @@ export const getAttachedFiles = async (req, res) => {
           error: "File not found",
         };
       }
-    
+
       // Read the file as a buffer
       const fileBuffer = fs.readFileSync(filePath);
-    
+
       // Convert the file buffer to a base64 string
-      const fileBase64 = fileBuffer.toString('base64');  // Ensuring proper base64 encoding
-    
+      const fileBase64 = fileBuffer.toString("base64");
+
       return {
         ...file,
-        fileBase64,  // Send base64 string instead of Blob
-        fileUrl: `/uploads/modules/${file.file}`,  // URL for frontend access
+        fileBase64,
+        fileUrl: `/uploads/modules/${file.file}`,
       };
     });
 
     // Send the transformed files as the response
+    console.log("transformedFiles:", transformedFiles);
     res.json({ files: transformedFiles });
   } catch (error) {
     console.error("Error in fetching attachedFiles:", error);
