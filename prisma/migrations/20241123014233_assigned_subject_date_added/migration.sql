@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE `assigned_subject` ADD COLUMN `dateCreated` DATETIME(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0);

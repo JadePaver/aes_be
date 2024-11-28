@@ -33,7 +33,7 @@ model users {
   graduate_records   graduate_records?
   archive_codes      archive_codes[]      @relation("UserArchiveCodes")
   assigned_subject   assigned_subject[]
-  module_isRead       module_isRead[]
+  module_isRead      module_isRead[]
 }
 
 model archive_codes {
@@ -66,17 +66,17 @@ model assigned_classroom {
 }
 
 model modules {
-  id            Int            @id @default(autoincrement())
+  id            Int             @id @default(autoincrement())
   subject_id    Int
-  name          String         @db.VarChar(155)
-  description   String         @db.VarChar(255)
-  is_removed    Int            @default(0) @db.TinyInt
+  name          String          @db.VarChar(155)
+  description   String          @db.VarChar(255)
+  is_removed    Int             @default(0) @db.TinyInt
   availableDate DateTime
-  subject       subjects       @relation(fields: [subject_id], references: [id], onDelete: Cascade)
+  subject       subjects        @relation(fields: [subject_id], references: [id], onDelete: Cascade)
   moduleFiles   module_files[]
+  module_isRead module_isRead[]
 
   @@unique([name, subject_id])
-  module_isRead module_isRead[]
 }
 
 model module_files {
@@ -94,8 +94,8 @@ model module_isRead {
   user_id   Int
   isRead    Int @default(0) @db.TinyInt
 
-  module    modules @relation(fields: [module_id], references: [id], onDelete: Cascade)
-  user    users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  module modules @relation(fields: [module_id], references: [id], onDelete: Cascade)
+  user   users   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([module_id, user_id])
 }
@@ -109,9 +109,10 @@ model subjects {
   is_removed  Int      @default(0) @db.TinyInt
   dateCreated DateTime @default(now()) @db.DateTime(0)
 
-  classroom        classrooms?        @relation(fields: [class_id], references: [id], onDelete: SetNull)
-  assigned_subject assigned_subject[]
-  modules          modules[]
+  classroom           classrooms?           @relation(fields: [class_id], references: [id], onDelete: SetNull)
+  assigned_subject    assigned_subject[]
+  modules             modules[]
+  assigned_assessment assigned_assessment[]
 
   @@unique([name, year, class_id])
 }
@@ -156,4 +157,70 @@ model sex_tbl {
   id    Int     @id @default(autoincrement())
   label String  @db.VarChar(155)
   users users[]
+}
+
+model assigned_assessment {
+  subject_id    Int
+  assessment_id Int
+
+  subject    subjects    @relation(fields: [subject_id], references: [id], onDelete: Cascade)
+  assessment assessments @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
+
+  @@unique([subject_id, assessment_id]) // Ensures no duplicate subject-assessment assignments
+}
+
+model assessments {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(155)
+  description   String   @db.VarChar(255)
+  duration      Int
+  allowedLate   Boolean  @default(false)
+  startDateTime DateTime
+  endDateTime   DateTime
+  dateCreated   DateTime @default(now())
+  dateModified  DateTime
+
+  questions          questions[]
+  assignedAssessment assigned_assessment[]
+}
+
+model questions {
+  id                 Int    @id @default(autoincrement())
+  assessment_id      Int
+  label              String @db.VarChar(255)
+  points             Int
+  type_id            Int
+  upperCaseSensitive Int    @default(0) @db.TinyInt
+  isRemoved          Int    @default(0) @db.TinyInt
+
+  assessment assessments     @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
+  type       questions_types @relation(fields: [type_id], references: [id])
+  choices    choices[]
+  question_images question_images[]
+
+}
+
+model question_images {
+  id    Int    @id @default(autoincrement())
+  question_id Int
+  label String @db.VarChar(255)
+  file  String @db.VarChar(255)
+
+  question questions @relation(fields: [question_id], references: [id], onDelete: Cascade)
+}
+
+model choices {
+  id          Int    @id @default(autoincrement())
+  question_id Int
+  label       String @db.VarChar(255)
+  isCorrect   Int    @default(0) @db.TinyInt
+
+  question questions @relation(fields: [question_id], references: [id], onDelete: Cascade)
+}
+
+model questions_types {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(255)
+
+  questions questions[]
 }

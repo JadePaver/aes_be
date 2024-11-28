@@ -12,6 +12,8 @@ import prof_imageRoutes from "./routes/prof_imageRoutes.js"
 import classroomRoutes from "./routes/classroomRoutes.js"
 import subjectRoutes from "./routes/subjectsRoutes.js"
 import moduleRoutes from "./routes/moduleRoutes.js"
+import assessmentRoutes from "./routes/assessmentsRoutes.js"
+
 
 dotenv.config();
 
@@ -47,6 +49,7 @@ app.use("/prof_img",prof_imageRoutes)
 app.use("/classrooms",classroomRoutes)
 app.use("/subjects",subjectRoutes)
 app.use("/modules",moduleRoutes)
+app.use("/assessments",assessmentRoutes)
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

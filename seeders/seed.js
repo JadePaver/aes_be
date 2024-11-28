@@ -8,6 +8,7 @@ import { assignArchiveCodesToUsers } from "./assignArchiveCodes.js";
 import { assignedClassroomSeeder } from "./tables/assigned_classroomSeeder.js";
 import { subjectsSeeder } from "./tables/subjectSeeder.js";
 import { assignedSubjectsSeeder } from "./tables/assigned_subjectSeeder.js";
+import { questionTypesSeeder } from "./tables/question_typesSeeder.js";
 
 async function main() {
   // Insert predefined data for roles
@@ -43,6 +44,9 @@ async function main() {
 
   await assignedSubjectsSeeder();
   console.log("assignedSubjects seeded successfully.");
+
+  await questionTypesSeeder();
+  console.log("questionTypes seeded successfully.");
 }
 
 main()
