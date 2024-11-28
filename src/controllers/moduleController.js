@@ -213,7 +213,6 @@ export const getAttachedFiles = async (req, res) => {
     });
 
     // Send the transformed files as the response
-    console.log("transformedFiles:", transformedFiles);
     res.json({ files: transformedFiles });
   } catch (error) {
     console.error("Error in fetching attachedFiles:", error);

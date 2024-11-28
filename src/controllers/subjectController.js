@@ -93,7 +93,6 @@ export const getAssigned = async (req, res) => {
       };
     });
 
-    console.log("formattedSubjects:",formattedSubjects)
     res.status(200).json(formattedSubjects);
   } catch (error) {
     console.error("Error fetching assigned subjects:", error);
@@ -448,8 +447,6 @@ export const removeMember = async (req, res) => {
     const { user_id } = req.params; // Extract `user_id` from route parameters
     const { id: subject_id } = req.body; // Extract `subject_id` from request body
 
-    console.log("params:", req.params);
-    console.log("body:", req.body);
     // Ensure both user_id and subject_id are provided
     if (!user_id || !subject_id) {
       return res
