@@ -47,7 +47,9 @@ export const uploadModule = async (req, res, next) => {
         data: assessmentImagesData,
       });
 
-      res.send({ message: "assafasfasf" });
+      res.status(201).json({
+        message: "Assessment has been created successfully",
+      });
     } catch (error) {
       console.error("Error saving files:", error);
       res.status(500).json({ error: "Failed to save files to the database." });
@@ -69,17 +71,31 @@ export const create = async (req, res, next) => {
       questions,
     } = objectData;
 
+    const { id: user_id } = req.user;
+
     const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
     const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50MB
 
     const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif"];
+
+    const subjectAssignedToUser = await prisma.assigned_subject.findFirst({
+      where: {
+        user_id: user_id,
+        subject_id: parseInt(subject_id),
+      },
+    });
+
+    if (!subjectAssignedToUser) {
+      return res.status(400).json({
+        error: "You're not assigned to the subject.",
+      });
+    }
 
     if (!questions || questions.length === 0) {
       return res.status(400).json({
         error: "Assessment can't have no questions.",
       });
     }
-    
 
     //validate size and extensions of files
     for (const question of questions) {
@@ -190,5 +206,258 @@ export const create = async (req, res, next) => {
   } catch (error) {
     console.error("Error in create:", error);
     res.status(500).json({ error: "Failed to create assessments." });
+  }
+};
+
+export const getAllAssigned = async (req, res, next) => {
+  try {
+    const { subject_id } = req.params;
+    const { id: user_id } = req.user;
+
+    // Check if the user is assigned to the subject
+    const subjectAssigned = await prisma.assigned_subject.findFirst({
+      where: {
+        user_id: user_id,
+        subject_id: parseInt(subject_id),
+      },
+    });
+
+    if (!subjectAssigned) {
+      return res.status(403).json({
+        error: "You are not assigned to this subject.",
+      });
+    }
+
+    // Fetch assessments and their questions
+    const assignedAssessments = await prisma.assessments.findMany({
+      where: {
+        assignedAssessment: {
+          some: {
+            subject_id: parseInt(subject_id),
+          },
+        },
+      },
+      include: {
+        questions: true,
+      },
+    });
+
+    if (assignedAssessments.length === 0) {
+      return res.status(404).json({
+        error: "No assessments found for the given subject.",
+      });
+    }
+
+    // Return the assessments with their questions
+    return res.status(200).json(assignedAssessments);
+  } catch (error) {
+    console.error("Error in getAllAssigned:", error);
+    return res.status(500).json({
+      error: "Failed to fetch assessments.",
+    });
+  }
+};
+
+export const getByID = async (req, res, next) => {
+  try {
+    const { assessment_id } = req.params;
+
+    // Fetch assessment along with questions and their choices
+    const assessment = await prisma.assessments.findUnique({
+      where: { id: parseInt(assessment_id) },
+      include: {
+        questions: {
+          include: {
+            type: {
+              // Assuming there's a relationship to a `types` table
+              select: {
+                id: true,
+                name: true, // Include type name (e.g., "Multiple Choice", "Short Answer")
+              },
+            },
+            choices: {
+              select: {
+                id: true,
+                label: true,
+                question_id: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessment) {
+      return res.status(404).json({ error: "Assessment not found" });
+    }
+
+    res.status(200).json(assessment);
+  } catch (error) {
+    console.error("Error in getting assessment:", error);
+    return res.status(500).json({
+      error: "Failed to fetch assessment.",
+    });
+  }
+};
+
+export const startAssessment = async (req, res, next) => {
+  try {
+    const { assessment_id } = req.params;
+    const { id: user_id } = req.user;
+
+    const resultData = {
+      assessment_id: parseInt(assessment_id),
+      user_id: user_id,
+    };
+
+    const newResult = await prisma.assessment_results.create({
+      data: resultData,
+    });
+
+    res.json({ message: "Assessment has Started" });
+  } catch (error) {
+    console.error("Error in starting assessment:", error);
+    return res.status(500).json({
+      error: "Failed to start assessment.",
+    });
+  }
+};
+
+export const findLastResult = async (req, res) => {
+  try {
+    const { assessment_id } = req.params;
+    const { id: user_id } = req.user;
+
+    const lastResult = await prisma.assessment_results.findFirst({
+      where: {
+        user_id: user_id,
+        assessment_id: parseInt(assessment_id),
+      },
+      orderBy: { dateSubmitted: "desc" }, // Order by most recent
+    });
+
+    res.json(lastResult);
+  } catch (error) {
+    console.error("Error in fetching last assessment result:", error);
+    return res.status(500).json({
+      error: "Failed to fetchs last assessment resultt.",
+    });
+  }
+};
+
+export const recordResult = async (req, res, next) => {
+  try {
+    const { assessment_id } = req.params;
+    const { id: user_id } = req.user;
+    const {answers, assessmentResult} = req.body;
+
+    // Step 2: Fetch questions and their choices for the assessment
+    const keyAnswers = await prisma.questions.findMany({
+      where: { assessment_id: parseInt(assessment_id) },
+      include: {
+        choices: true, // Include associated choices
+      },
+    });
+
+    let totalPointsEarned = 0;
+    let maxScore = 0;
+
+    // Step 3: Process user answers using switch-case based on question type
+    const userAnswersData = keyAnswers.map((question) => {
+      const userAnswer = answers.find((a) => a.question_id === question.id);
+
+      let isCorrect = 0;
+      let pointsEarned = 0;
+
+      switch (question.type_id) {
+        case 1: // Multiple Choice
+          const correctChoices = question.choices.filter(
+            (choice) => choice.isCorrect === 1
+          );
+
+          const selectedChoice = question.choices.find(
+            (choice) => choice.id === parseInt(userAnswer?.choice_id)
+          );
+
+          if (correctChoices.length > 0) {
+            maxScore += question.points;
+
+            if (
+              selectedChoice &&
+              correctChoices.some((choice) => choice.id === selectedChoice.id)
+            ) {
+              // Mark the answer as correct if the selected choice is among the correct ones
+              isCorrect = 1;
+              pointsEarned = question.points; // Use question's points for the correct answer
+            }
+          }
+          break;
+
+        case 2: // Fill-in-the-blank
+          maxScore += question.points; // Add the question's points to the max score
+          const correctChoice = question.choices.find(
+            (choice) => choice.isCorrect === 1
+          );
+
+          if (correctChoice) {
+            if (
+              question.upperCaseSensitive
+                ? userAnswer?.stringAnswer === correctChoice.label
+                : userAnswer?.stringAnswer?.toLowerCase() ===
+                  correctChoice.label.toLowerCase()
+            ) {
+              isCorrect = 1;
+              pointsEarned = question.points; // Assign points for a correct answer
+            }
+          }
+          break;
+
+        case 3: // Essay
+          maxScore += question.points; // Add the question's points to the max score
+          pointsEarned = 0; // Grading logic for essays can be applied later
+          break;
+
+        default:
+          console.warn(`Unknown question type: ${question.type_id}`);
+          break;
+      }
+
+      totalPointsEarned += pointsEarned;
+      return {
+        assessment_result_id: assessmentResult.id,
+        question_id: question.id,
+        choice_id: parseInt(userAnswer?.choice_id) || null,
+        string_ans: userAnswer?.stringAnswer || "",
+        isCorrect: isCorrect,
+        points_earned: pointsEarned,
+      };
+    });
+
+    // console.log("userAnswersData:", userAnswersData);
+    // console.log("Total Points Earned:", totalPointsEarned);
+    // console.log("Max Score:", maxScore);
+
+    const newUserAnswerResult = await prisma.user_answers.createMany({
+      data: userAnswersData,
+    });
+    // console.log("newUserAnswerResult:", newUserAnswerResult);
+
+    const updateAssessmentResult = await prisma.assessment_results.update({
+      where: {
+        id: assessmentResult.id,
+      },
+      data: {
+        total_score: totalPointsEarned,
+        max_score: maxScore,
+        dateSubmitted: new Date(),
+      },
+    });
+
+    res.json(userAnswersData);
+  } catch (error) {
+    console.error("Error in getting assessment:", error);
+    return res.status(500).json({
+      error: "Failed to fetch assessment.",
+    });
   }
 };

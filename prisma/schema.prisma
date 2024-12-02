@@ -193,18 +193,17 @@ model questions {
   upperCaseSensitive Int    @default(0) @db.TinyInt
   isRemoved          Int    @default(0) @db.TinyInt
 
-  assessment assessments     @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
-  type       questions_types @relation(fields: [type_id], references: [id])
-  choices    choices[]
+  assessment      assessments       @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
+  type            questions_types   @relation(fields: [type_id], references: [id])
+  choices         choices[]
   question_images question_images[]
-
 }
 
 model question_images {
-  id    Int    @id @default(autoincrement())
+  id          Int    @id @default(autoincrement())
   question_id Int
-  label String @db.VarChar(255)
-  file  String @db.VarChar(255)
+  label       String @db.VarChar(255)
+  file        String @db.VarChar(255)
 
   question questions @relation(fields: [question_id], references: [id], onDelete: Cascade)
 }
@@ -223,4 +222,28 @@ model questions_types {
   name String @db.VarChar(255)
 
   questions questions[]
+}
+
+model assessment_results {
+  id            Int       @id @default(autoincrement())
+  assessment_id Int
+  user_id       Int
+  total_score   Int?
+  max_score     Int?
+  dateStarted   DateTime  @default(now())
+  dateSubmitted DateTime?
+
+  user_answers user_answers[]
+}
+
+model user_answers {
+  id                   Int     @id @default(autoincrement())
+  assessment_result_id Int
+  question_id          Int
+  choice_id            Int?
+  string_ans           String?
+  isCorrect            Int     @default(0) @db.TinyInt
+  points_earned        Int
+
+  assessment_result assessment_results @relation(fields: [assessment_result_id], references: [id], onDelete: Cascade)
 }
