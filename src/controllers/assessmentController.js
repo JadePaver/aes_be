@@ -258,9 +258,10 @@ export const getAllAssigned = async (req, res, next) => {
   }
 };
 
-export const getByID = async (req, res, next) => {
+export const getByIDWithTimer = async (req, res, next) => {
   try {
     const { assessment_id } = req.params;
+    const { id: user_id } = req.user;
 
     // Fetch assessment along with questions and their choices
     const assessment = await prisma.assessments.findUnique({
@@ -291,6 +292,32 @@ export const getByID = async (req, res, next) => {
       return res.status(404).json({ error: "Assessment not found" });
     }
 
+    const userAssessmentResult = await prisma.assessment_results.findFirst({
+      where: {
+        assessment_id: parseInt(assessment_id),
+        user_id: user_id,
+      },
+      orderBy: {
+        dateStarted: "desc",
+      },
+    });
+
+    const timeRemaining = userAssessmentResult.dateEnd - new Date();
+
+    if (timeRemaining > 0) {
+      const totalSeconds = Math.floor(timeRemaining / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      // console.log(`Remaining Time: ${hours}h ${minutes}m ${seconds}s`);
+    } else {
+      return res.status(410).json({
+        message: "The time has expired.",
+      });
+    }
+    assessment.timeRemaining = timeRemaining; //delete this
+
     res.status(200).json(assessment);
   } catch (error) {
     console.error("Error in getting assessment:", error);
@@ -305,9 +332,22 @@ export const startAssessment = async (req, res, next) => {
     const { assessment_id } = req.params;
     const { id: user_id } = req.user;
 
+    console.log("assessment_id:", assessment_id);
+    console.log();
+
+    const assessment = await prisma.assessments.findFirst({
+      where: { id: parseInt(assessment_id) },
+    });
+
+    console.log("assessment:", assessment);
+
+    const now = new Date();
+    const dateEnd = new Date(now.getTime() + assessment.duration * 60000);
+
     const resultData = {
       assessment_id: parseInt(assessment_id),
       user_id: user_id,
+      dateEnd: dateEnd,
     };
 
     const newResult = await prisma.assessment_results.create({
@@ -336,7 +376,7 @@ export const findLastResult = async (req, res) => {
       orderBy: { dateSubmitted: "desc" }, // Order by most recent
     });
 
-    res.json(lastResult);
+    res.send(lastResult);
   } catch (error) {
     console.error("Error in fetching last assessment result:", error);
     return res.status(500).json({
@@ -349,7 +389,7 @@ export const recordResult = async (req, res, next) => {
   try {
     const { assessment_id } = req.params;
     const { id: user_id } = req.user;
-    const {answers, assessmentResult} = req.body;
+    const { answers, assessmentResult } = req.body;
 
     // Step 2: Fetch questions and their choices for the assessment
     const keyAnswers = await prisma.questions.findMany({
@@ -453,7 +493,65 @@ export const recordResult = async (req, res, next) => {
       },
     });
 
-    res.json(userAnswersData);
+    res.json({message:"assessment successfullty recorded"});
+  } catch (error) {
+    console.error("Error in getting assessment:", error);
+    return res.status(500).json({
+      error: "Failed to fetch assessment.",
+    });
+  }
+};
+
+export const userResults = async (req, res, next) => {
+  try {
+    const { id: user_id } = req.user; // Extract user_id from the authenticated user
+    const { subject_id } = req.params; // Extract subject_id from the route params
+
+    console.log("params:", req.params);
+    console.log("user:", req.user);
+
+    // Query the database to fetch assessment results for the user and subject
+    const assessmentResults = await prisma.assessment_results.findMany({
+      where: {
+        user_id: user_id,
+        assessment: {
+          assignedAssessment: {
+            some: {
+              subject_id: parseInt(subject_id),
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessmentResults.length) {
+      return res.status(404).json({
+        message: "No assessment results found for this user and subject.",
+      });
+    }
+
+    console.log("assessmentResults:",assessmentResults)
+    // Respond with the fetched results
+    res.json(assessmentResults);
+  } catch (error) {
+    console.error("Error in getting assessment results:", error);
+    return res.status(500).json({
+      error: "Failed to fetch assessment results.",
+    });
+  }
+};
+
+export const test = async (req, res, next) => {
+  try {
+    res.cookie("accessToken", "123456789", {
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000,
+      sameSite: "lax",
+    });
+
+    console.log("COOKEI:", req.cookies);
+
+    res.send({ message: "safasf" });
   } catch (error) {
     console.error("Error in getting assessment:", error);
     return res.status(500).json({

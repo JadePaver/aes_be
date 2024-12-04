@@ -34,6 +34,8 @@ model users {
   archive_codes      archive_codes[]      @relation("UserArchiveCodes")
   assigned_subject   assigned_subject[]
   module_isRead      module_isRead[]
+
+  assessment_results assessment_results[]
 }
 
 model archive_codes {
@@ -182,6 +184,8 @@ model assessments {
 
   questions          questions[]
   assignedAssessment assigned_assessment[]
+
+  assessment_results assessment_results[]
 }
 
 model questions {
@@ -230,8 +234,13 @@ model assessment_results {
   user_id       Int
   total_score   Int?
   max_score     Int?
+  isRetake      Int       @default(0) @db.TinyInt
   dateStarted   DateTime  @default(now())
+  dateEnd       DateTime
   dateSubmitted DateTime?
+
+  user       users       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  assessment assessments @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
 
   user_answers user_answers[]
 }
