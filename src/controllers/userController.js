@@ -242,12 +242,29 @@ export const loginUser = async (req, res) => {
       role: user.role_id,
       ...(user.profile_image && { profileImage: user.profile_image.file }), // Include profileImage if it exists
     };
-    // Generate JWT token
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET_TOKEN, {
-      expiresIn: "1h",
+
+    // Generate Access Token
+    const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET_TOKEN, {
+      expiresIn: "1m", // Access token expires in 1 hour
     });
 
-    console.log("apples");
+    console.log("refresh");
+
+    // Generate Refresh Token
+    const refreshToken = jwt.sign(
+      { id: user.id, username: user.username },
+      process.env.JWT_REFRESH_TOKEN,
+      {
+        expiresIn: "7d", // Refresh token expires in 7 days
+      }
+    );
+    // res.cookie("refreshToken", refreshToken, {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === "production", // Set secure flag only in production
+    //   sameSite: "strict",
+    //   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    // });
+
     // Send the response with token and user details (excluding password)
     res.status(200).json({
       message: "Login successful",
@@ -257,7 +274,8 @@ export const loginUser = async (req, res) => {
         role: user.role_id,
         ...(user.profile_image && { profileImage: user.profile_image.file }),
       },
-      token,
+      accessToken,
+      refreshToken
     });
   } catch (error) {
     console.error("Login error:", error);

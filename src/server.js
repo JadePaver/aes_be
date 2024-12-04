@@ -3,17 +3,17 @@ import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
 import os from "os";
-import multer from "multer";
+import cookieParser from "cookie-parser";
 
-import userRoutes from "./routes/userRoutes.js"
-import roleRoutes from "./routes/roleRoutes.js"
-import sexRoutes from "./routes/sexRoute.js"
-import prof_imageRoutes from "./routes/prof_imageRoutes.js"
-import classroomRoutes from "./routes/classroomRoutes.js"
-import subjectRoutes from "./routes/subjectsRoutes.js"
-import moduleRoutes from "./routes/moduleRoutes.js"
-import assessmentRoutes from "./routes/assessmentsRoutes.js"
-
+import tokenRoutes from "./routes/tokenRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import roleRoutes from "./routes/roleRoutes.js";
+import sexRoutes from "./routes/sexRoute.js";
+import prof_imageRoutes from "./routes/prof_imageRoutes.js";
+import classroomRoutes from "./routes/classroomRoutes.js";
+import subjectRoutes from "./routes/subjectsRoutes.js";
+import moduleRoutes from "./routes/moduleRoutes.js";
+import assessmentRoutes from "./routes/assessmentsRoutes.js";
 
 dotenv.config();
 
@@ -31,25 +31,26 @@ for (const interfaceKey in networkInterfaces) {
   }
 }
 
+app.use(bodyParser.json());
+app.use(cookieParser());
 app.use(
   cors({
+    origin: ["http://localhost:3007","http://192.168.101.60:3007"],
     credentials: true,
   })
 );
-app.use(bodyParser.json());
-
 app.get("/getserver_ip", (req, res) => {
-  res.send( {localIP} );
+  res.send({ localIP });
 });
-
-app.use("/users",userRoutes)
-app.use("/roles",roleRoutes)
-app.use("/sex",sexRoutes)
-app.use("/prof_img",prof_imageRoutes)
-app.use("/classrooms",classroomRoutes)
-app.use("/subjects",subjectRoutes)
-app.use("/modules",moduleRoutes)
-app.use("/assessments",assessmentRoutes)
+app.use("/token", tokenRoutes);
+app.use("/users", userRoutes);
+app.use("/roles", roleRoutes);
+app.use("/sex", sexRoutes);
+app.use("/prof_img", prof_imageRoutes);
+app.use("/classrooms", classroomRoutes);
+app.use("/subjects", subjectRoutes);
+app.use("/modules", moduleRoutes);
+app.use("/assessments", assessmentRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
