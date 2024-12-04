@@ -11,7 +11,7 @@ export const subjectDetails = async (req, res) => {
       },
       include: {
         classroom: true, // Include classroom details
-        modules: true,   // Include related modules
+        modules: true, // Include related modules
       },
     });
 
@@ -26,7 +26,6 @@ export const subjectDetails = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch subject details." });
   }
 };
-
 
 export const getAssigned = async (req, res) => {
   try {
@@ -49,11 +48,15 @@ export const getAssigned = async (req, res) => {
 
     // If no subjects are found, return an appropriate response
     if (assignedSubjects.length === 0) {
-      return res.status(404).json({ message: "No subjects found for this user." });
+      return res
+        .status(404)
+        .json({ message: "No subjects found for this user." });
     }
 
     // Extract subject IDs
-    const subjectIds = assignedSubjects.map((assignment) => assignment.subject_id);
+    const subjectIds = assignedSubjects.map(
+      (assignment) => assignment.subject_id
+    );
 
     // Fetch users with role_id = 3 (instructors) assigned to these subjects
     const instructors = await prisma.assigned_subject.findMany({
@@ -99,8 +102,6 @@ export const getAssigned = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch assigned subjects." });
   }
 };
-
-
 
 export const enrollUser = async (req, res) => {
   try {
@@ -344,6 +345,57 @@ export const createSubject = async (req, res) => {
   }
 };
 
+export const updateSubject = async (req, res) => {
+  try {
+    const { id } = req.params; // Extract subject ID from route parameters
+    const { name } = req.body; // Extract the new name from the request body
+
+    // Validate required field
+    if (!name) {
+      return res.status(400).json({ error: "Subject name is required." });
+    }
+
+    // Check if the subject exists
+    const existingSubject = await prisma.subjects.findUnique({
+      where: { id: Number(id) }, // Ensure id is a number
+    });
+
+    if (!existingSubject) {
+      return res.status(404).json({ error: "Subject not found." });
+    }
+
+    // Check for duplicate name within the same year and class
+    const duplicateSubject = await prisma.subjects.findFirst({
+      where: {
+        name,
+        year: existingSubject.year, // Check against the same year
+        class_id: existingSubject.class_id, // Check against the same class
+        NOT: { id: Number(id) }, // Exclude the current subject
+      },
+    });
+
+    if (duplicateSubject) {
+      return res.status(409).json({
+        error:
+          "A subject with the same name already exists in this class and year.",
+      });
+    }
+
+    // Update the subject name
+    const updatedSubject = await prisma.subjects.update({
+      where: { id: Number(id) },
+      data: { name },
+    });
+
+    res.status(200).json({
+      message: "Subject name updated successfully.",
+      subject: updatedSubject,
+    });
+  } catch (error) {
+    console.error("Error updating subject name:", error);
+    res.status(500).json({ error: "Failed to update the subject name." });
+  }
+};
 export const enrollClassroom = async (req, res) => {
   try {
     const { subject_id } = req.params;
