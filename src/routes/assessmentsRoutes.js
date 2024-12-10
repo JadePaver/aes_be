@@ -9,7 +9,9 @@ import {
   startAssessment,
   findLastResult,
   userResults,
-  test
+  getAllResultsByAssessmentID,
+  resetResult,
+  test,
 } from "../controllers/assessmentController.js";
 
 const router = express.Router();
@@ -21,6 +23,13 @@ router.post("/record_result/:assessment_id", authenticateToken, recordResult);
 router.post("/start/:assessment_id", authenticateToken, startAssessment);
 router.post("/last_record/:assessment_id", authenticateToken, findLastResult);
 router.post("/user_results/:subject_id", authenticateToken, userResults);
+router.post(
+  "/results_by_assessment/:assessment_id",
+  authenticateToken,
+  getAllResultsByAssessmentID
+);
+router.post("/reset_result", authenticateToken, resetResult);
+
 router.post("/test", authenticateToken, test);
 
 export default router;

@@ -4,7 +4,6 @@ import fs from "fs";
 import prisma from "../prismaClient.js";
 import jwt from "jsonwebtoken";
 
-
 // Set up Multer storage to define where and how to store the uploaded files
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -85,7 +84,7 @@ export const serveImage = (req, res) => {
     console.error("File not found:", imagePath);
     return res.status(404).json({ error: "Image not found" });
   }
-
+  console.log("imagePath", imagePath);
   res.sendFile(imagePath, (err) => {
     if (err) {
       console.error("Error sending file:", err);
@@ -93,4 +92,3 @@ export const serveImage = (req, res) => {
     }
   });
 };
-

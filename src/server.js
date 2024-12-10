@@ -35,7 +35,7 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["http://localhost:3007","http://192.168.101.60:3007"],
+    origin: ["http://localhost:3007","http://192.168.0.14:3007"],
     credentials: true,
   })
 );
