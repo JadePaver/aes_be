@@ -84,7 +84,6 @@ export const serveImage = (req, res) => {
     console.error("File not found:", imagePath);
     return res.status(404).json({ error: "Image not found" });
   }
-  console.log("imagePath", imagePath);
   res.sendFile(imagePath, (err) => {
     if (err) {
       console.error("Error sending file:", err);
