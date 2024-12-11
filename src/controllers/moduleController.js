@@ -142,7 +142,6 @@ export const getBySubject = async (req, res) => {
   try {
     const { subject_id } = req.params; // Get subject_id from route parameters
     const { id: user_id } = req.user; // Get user_id from the authenticated user
-
     // Step 1: Check if the user is assigned to the subject
     const assignedSubject = await prisma.assigned_subject.findFirst({
       where: {
@@ -150,9 +149,10 @@ export const getBySubject = async (req, res) => {
         user_id: Number(user_id),
       },
     });
-
     if (!assignedSubject) {
-      return res.status(403).json({ error: "You are not assigned to this subject." });
+      return res
+        .status(403)
+        .json({ error: "You are not assigned to this subject." });
     }
 
     // Step 2: Fetch modules for the given subject
@@ -165,7 +165,6 @@ export const getBySubject = async (req, res) => {
         },
       },
     });
-
     res.status(200).json(modules);
   } catch (error) {
     console.error("Error in fetching modules:", error);

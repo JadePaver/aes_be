@@ -201,6 +201,7 @@ model questions {
   type            questions_types   @relation(fields: [type_id], references: [id])
   choices         choices[]
   question_images question_images[]
+  user_answers user_answers[]
 }
 
 model question_images {
@@ -219,6 +220,8 @@ model choices {
   isCorrect   Int    @default(0) @db.TinyInt
 
   question questions @relation(fields: [question_id], references: [id], onDelete: Cascade)
+
+  user_answers user_answers[]
 }
 
 model questions_types {
@@ -250,9 +253,11 @@ model user_answers {
   assessment_result_id Int
   question_id          Int
   choice_id            Int?
-  string_ans           String?
+  string_ans           String? @db.VarChar(5000)
   isCorrect            Int     @default(0) @db.TinyInt
   points_earned        Int
 
   assessment_result assessment_results @relation(fields: [assessment_result_id], references: [id], onDelete: Cascade)
+  question          questions          @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  choice            choices?           @relation(fields: [choice_id], references: [id], onDelete: Cascade)
 }

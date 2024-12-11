@@ -14,6 +14,7 @@ import classroomRoutes from "./routes/classroomRoutes.js";
 import subjectRoutes from "./routes/subjectsRoutes.js";
 import moduleRoutes from "./routes/moduleRoutes.js";
 import assessmentRoutes from "./routes/assessmentsRoutes.js";
+import assessmentResultsRoutes from "./routes/assessmentResultsRoutes.js";
 
 dotenv.config();
 
@@ -35,7 +36,7 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["http://localhost:3007","http://192.168.101.60:3007"],
+    origin: ["http://localhost:3007", "http://192.168.0.14:3007"],
     credentials: true,
   })
 );
@@ -51,6 +52,7 @@ app.use("/classrooms", classroomRoutes);
 app.use("/subjects", subjectRoutes);
 app.use("/modules", moduleRoutes);
 app.use("/assessments", assessmentRoutes);
+app.use("/result_assessments", assessmentResultsRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

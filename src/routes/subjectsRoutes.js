@@ -16,7 +16,7 @@ const router = express.Router();
 
 router.post("/", authenticateToken, getAllSubjects);
 router.post("/create", authenticateToken, createSubject);
-router.put("/update/:id/name", authenticateToken, updateSubject);
+router.put("/update/:id/name", authenticateToken, updateSubject); //ngaa may "name" it could be /update_name/:params
 router.post(
   "/enroll_classroom/:subject_id",
   authenticateToken,

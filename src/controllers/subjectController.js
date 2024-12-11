@@ -349,7 +349,6 @@ export const updateSubject = async (req, res) => {
   try {
     const { id } = req.params; // Extract subject ID from route parameters
     const { name } = req.body; // Extract the new name from the request body
-
     // Validate required field
     if (!name) {
       return res.status(400).json({ error: "Subject name is required." });
@@ -513,8 +512,6 @@ export const removeMember = async (req, res) => {
         subject_id: Number(subject_id), // Ensure `subject_id` is treated as a number
       },
     });
-
-    console.log("removedEntry:", removedEntry);
 
     // Check if the entry was removed
     if (removedEntry.count === 0) {

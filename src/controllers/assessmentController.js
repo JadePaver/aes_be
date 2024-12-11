@@ -283,6 +283,13 @@ export const getByIDWithTimer = async (req, res, next) => {
                 question_id: true,
               },
             },
+            question_images: {
+              select: {
+                id: true,
+                file: true,
+                label: true,
+              },
+            },
           },
         },
       },
@@ -291,6 +298,34 @@ export const getByIDWithTimer = async (req, res, next) => {
     if (!assessment) {
       return res.status(404).json({ error: "Assessment not found" });
     }
+
+    assessment.questions = assessment.questions.map((question) => {
+      const transformedFiles = question.question_images.map((file) => {
+        const filePath = path.resolve("uploads/assessments", file.file);
+
+        if (!fs.existsSync(filePath)) {
+          console.error("File not found:", filePath);
+          return {
+            ...file,
+            error: "File not found",
+          };
+        }
+
+        const fileBuffer = fs.readFileSync(filePath);
+        const fileBase64 = fileBuffer.toString("base64");
+
+        return {
+          ...file,
+          fileBase64,
+          fileUrl: `/uploads/assessments/${file.file}`,
+        };
+      });
+
+      return {
+        ...question,
+        question_images: transformedFiles,
+      };
+    });
 
     const userAssessmentResult = await prisma.assessment_results.findFirst({
       where: {
@@ -309,16 +344,34 @@ export const getByIDWithTimer = async (req, res, next) => {
       const hours = Math.floor(totalSeconds / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
       const seconds = totalSeconds % 60;
-
-      // console.log(`Remaining Time: ${hours}h ${minutes}m ${seconds}s`);
     } else {
+      let max_score = 0;
+
+      assessment.questions.map((question) => {
+        max_score = +question.points;
+      });
+      //End continue status by stating the total and max score
+      await prisma.assessment_results.update({
+        where: {
+          id: userAssessmentResult.id, // Ensure `userAssessmentResult` contains a valid `id`
+        },
+        data: {
+          max_score: max_score || 0, // Provide a default value if `max_score` is undefined
+          total_score: 0, // Resetting to 0 as required
+          dateSubmitted: new Date(), // Set the current timestamp
+        },
+      });
+
       return res.status(410).json({
         message: "The time has expired.",
       });
     }
-    assessment.timeRemaining = timeRemaining; //delete this
+    assessment.timeRemaining = timeRemaining; 
 
-    res.status(200).json(assessment);
+    res.status(200).json({
+      ...assessment,
+      timeRemaining: timeRemaining,
+    });
   } catch (error) {
     console.error("Error in getting assessment:", error);
     return res.status(500).json({
@@ -332,14 +385,9 @@ export const startAssessment = async (req, res, next) => {
     const { assessment_id } = req.params;
     const { id: user_id } = req.user;
 
-    console.log("assessment_id:", assessment_id);
-    console.log();
-
     const assessment = await prisma.assessments.findFirst({
       where: { id: parseInt(assessment_id) },
     });
-
-    console.log("assessment:", assessment);
 
     const now = new Date();
     const dateEnd = new Date(now.getTime() + assessment.duration * 60000);
@@ -473,14 +521,9 @@ export const recordResult = async (req, res, next) => {
       };
     });
 
-    // console.log("userAnswersData:", userAnswersData);
-    // console.log("Total Points Earned:", totalPointsEarned);
-    // console.log("Max Score:", maxScore);
-
     const newUserAnswerResult = await prisma.user_answers.createMany({
       data: userAnswersData,
     });
-    // console.log("newUserAnswerResult:", newUserAnswerResult);
 
     const updateAssessmentResult = await prisma.assessment_results.update({
       where: {
@@ -493,7 +536,9 @@ export const recordResult = async (req, res, next) => {
       },
     });
 
-    res.json({message:"assessment successfullty recorded"});
+    res.json({
+      message: "Your Assessment result has been recorded successfullty",
+    });
   } catch (error) {
     console.error("Error in getting assessment:", error);
     return res.status(500).json({
@@ -506,9 +551,6 @@ export const userResults = async (req, res, next) => {
   try {
     const { id: user_id } = req.user; // Extract user_id from the authenticated user
     const { subject_id } = req.params; // Extract subject_id from the route params
-
-    console.log("params:", req.params);
-    console.log("user:", req.user);
 
     // Query the database to fetch assessment results for the user and subject
     const assessmentResults = await prisma.assessment_results.findMany({
@@ -524,19 +566,54 @@ export const userResults = async (req, res, next) => {
       },
     });
 
-    if (!assessmentResults.length) {
-      return res.status(404).json({
-        message: "No assessment results found for this user and subject.",
-      });
-    }
-
-    console.log("assessmentResults:",assessmentResults)
     // Respond with the fetched results
     res.json(assessmentResults);
   } catch (error) {
     console.error("Error in getting assessment results:", error);
     return res.status(500).json({
       error: "Failed to fetch assessment results.",
+    });
+  }
+};
+
+export const getAllResultsByAssessmentID = async (req, res, next) => {
+  try {
+    const { assessment_id } = req.params;
+
+    const results = await prisma.assessment_results.findMany({
+      where: { assessment_id: parseInt(assessment_id) },
+      include: {
+        user: {
+          select: {
+            fName: true,
+            lName: true,
+            mName: true,
+            ext_name: true,
+          },
+        },
+      },
+    });
+
+    res.json(results);
+  } catch (error) {
+    console.error("Error in getting fetching results:", error);
+    return res.status(500).json({
+      error: "Failed to fetch assessment results.",
+    });
+  }
+};
+
+export const resetResult = async (req, res, next) => {
+  try {
+    const { id: result_id } = req.body;
+
+    await prisma.assessment_results.delete({ where: { id: result_id } });
+
+    res.json({ message: "Assessment result has been successfully reset" });
+  } catch (error) {
+    console.error("Error in getting assessment:", error);
+    return res.status(500).json({
+      error: "Failed to fetch assessment.",
     });
   }
 };
