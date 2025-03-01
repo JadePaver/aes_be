@@ -2,6 +2,8 @@
 import prisma from "../prismaClient.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import path from "path";
+import fs from "fs";
 
 export const toggleLockUser = async (req, res) => {
   const { id } = req.params;
@@ -202,18 +204,14 @@ export const getAllUsers = async (req, res) => {
 };
 
 export const loginUser = async (req, res) => {
-  console.log("loging in");
-
-  const { username, password } = req.body;
-
-  if (!username || !password) {
-    return res
-      .status(400)
-      .json({ error: "Username and password are required" });
-  }
-
   try {
-    console.log("loging in");
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res
+        .status(400)
+        .json({ error: "Username and password are required" });
+    }
     const user = await prisma.users.findUnique({
       where: { username },
       include: {
@@ -236,19 +234,34 @@ export const loginUser = async (req, res) => {
       return res.status(401).send({ error: "Invalid username or password" });
     }
 
+    if (user.profile_image) {
+      const filePath = path.resolve("uploads", user.profile_image.file);
+
+      if (!fs.existsSync(filePath)) {
+        console.error("File not found:", filePath);
+        return {
+          ...file,
+          error: "File not found",
+        };
+      }
+
+      const fileBuffer = fs.readFileSync(filePath);
+      const fileBase64 = fileBuffer.toString("base64");
+
+      user.base64 = fileBase64;
+
+    }
+
     const tokenPayload = {
       id: user.id,
       username: user.username,
       role: user.role_id,
-      ...(user.profile_image && { profileImage: user.profile_image.file }), // Include profileImage if it exists
     };
 
     // Generate Access Token
     const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET_TOKEN, {
       expiresIn: "1m", // Access token expires in 1 hour
     });
-
-    console.log("refresh");
 
     // Generate Refresh Token
     const refreshToken = jwt.sign(
@@ -272,10 +285,10 @@ export const loginUser = async (req, res) => {
         id: user.id,
         username: user.username,
         role: user.role_id,
-        ...(user.profile_image && { profileImage: user.profile_image.file }),
+        ...(user.profile_image && { base64: user.base64 }),
       },
       accessToken,
-      refreshToken
+      refreshToken,
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -299,7 +312,6 @@ export const registUser = async (req, res) => {
     password,
     code,
   } = req.body;
-  console.log("data:", req.body);
 
   // Check if user type is Admin or Operator and prevent assignment
   if (type === 1 || type === 5) {
@@ -366,7 +378,6 @@ export const registUser = async (req, res) => {
         password: hashedPassword,
       },
     });
-    console.log("newUser:", newUser);
 
     await prisma.archive_codes.update({
       where: { code },
@@ -379,7 +390,6 @@ export const registUser = async (req, res) => {
       process.env.JWT_SECRET_TOKEN,
       { expiresIn: "1h" }
     );
-    console.log("token:", token);
     // Send response
     res.status(201).json({
       message: "User registered successfully",

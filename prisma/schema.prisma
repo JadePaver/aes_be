@@ -104,7 +104,7 @@ model module_isRead {
 
 model subjects {
   id          Int      @id @default(autoincrement())
-  code        String   @db.VarChar(55)
+  code        String   @unique @db.VarChar(55)
   name        String   @db.VarChar(155)
   year        String   @db.VarChar(55)
   class_id    Int?
@@ -122,6 +122,7 @@ model subjects {
 model assigned_subject {
   user_id     Int
   subject_id  Int
+  is_approved Int      @default(0) @db.TinyInt
   dateCreated DateTime @default(now()) @db.DateTime(0)
 
   user    users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -201,7 +202,7 @@ model questions {
   type            questions_types   @relation(fields: [type_id], references: [id])
   choices         choices[]
   question_images question_images[]
-  user_answers user_answers[]
+  user_answers    user_answers[]
 }
 
 model question_images {

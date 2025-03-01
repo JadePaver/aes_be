@@ -71,6 +71,22 @@ export const create = async (req, res, next) => {
       questions,
     } = objectData;
 
+    if (
+      !name ||
+      name.trim().length === 0 || // Empty name
+      !description ||
+      description.trim().length === 0 || // Empty description
+      duration < 1 || // Invalid duration
+      !Array.isArray(questions) ||
+      questions.length === 0 // No questions
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid input: All fields are required. Duration must be 1 or more, and there must be at least one question.",
+      });
+    }
+
     const { id: user_id } = req.user;
 
     const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
@@ -242,12 +258,6 @@ export const getAllAssigned = async (req, res, next) => {
       },
     });
 
-    if (assignedAssessments.length === 0) {
-      return res.status(404).json({
-        error: "No assessments found for the given subject.",
-      });
-    }
-
     // Return the assessments with their questions
     return res.status(200).json(assignedAssessments);
   } catch (error) {
@@ -366,7 +376,7 @@ export const getByIDWithTimer = async (req, res, next) => {
         message: "The time has expired.",
       });
     }
-    assessment.timeRemaining = timeRemaining; 
+    assessment.timeRemaining = timeRemaining;
 
     res.status(200).json({
       ...assessment,

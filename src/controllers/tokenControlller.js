@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import prisma from "../prismaClient.js";
 
 export const refreshToken = async (req, res, next) => {
   try {
@@ -10,11 +11,22 @@ export const refreshToken = async (req, res, next) => {
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_TOKEN);
 
+    const userData = await prisma.users.findUnique({
+      where: {
+        id: decoded.id,
+      },
+    });
+
+    if (!userData) {
+      res.status(404).json({ error: "User Not Found" });
+    }
+
     const newAccessToken = jwt.sign(
-      { id: decoded.id, username: decoded.username },
+      { id: userData.id, username: userData.username, role: userData.role_id },
       process.env.JWT_SECRET_TOKEN,
       { expiresIn: "1m" } // 30 minutes
     );
+
     // Generate a new refresh token (longer expiration time)
     const newRefreshToken = jwt.sign(
       { id: decoded.id, username: decoded.username },
@@ -22,10 +34,11 @@ export const refreshToken = async (req, res, next) => {
       { expiresIn: "7d" } // 7 days (or whatever duration you prefer)
     );
 
-    res.status(200)
+    res
+      .status(200)
       .json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
   } catch (error) {
-    console.log("error:", error);
+    console.error("error:", error);
     res.status(500).json({ error: "Failed to refresh token" });
   }
 };
