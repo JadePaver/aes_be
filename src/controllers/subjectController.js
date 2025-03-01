@@ -29,7 +29,7 @@ export const subjectDetails = async (req, res) => {
 
 export const getAssigned = async (req, res) => {
   try {
-    const { user_id } = req.params;
+    const { id: user_id } = req.user;
 
     // Validate the user_id
     if (!user_id) {
@@ -106,7 +106,7 @@ export const getAssigned = async (req, res) => {
 export const enrollUser = async (req, res) => {
   try {
     const { user_code } = req.params;
-    const { id: subject_id, name: subject_name, year: subject_year } = req.body; // Extract subject_id from the request body
+    const { id: subject_id, name: subject_name, year: subject_year } = req.body;
     // Find the user associated with the archive code
     const archiveCodeRecord = await prisma.archive_codes.findUnique({
       where: { code: user_code },
@@ -241,10 +241,42 @@ export const getMembers = async (req, res) => {
 
 export const getAllSubjects = async (req, res) => {
   try {
+    
     const subjects = await prisma.subjects.findMany({
       include: {
         classroom: true,
         assigned_subject: true,
+      },
+    });
+
+    // Transform subjects to include the count of assigned users
+    const subjectsWithUserCount = subjects.map((subject) => ({
+      ...subject,
+      assignedUserCount: subject.assigned_subject.length, // Count assigned users
+    }));
+
+    res.json(subjectsWithUserCount);
+  } catch (error) {
+    console.error("Error fetching subjects:", error); // Log the error for debugging
+    res.status(500).json({ error: "Failed to fetch subjects" });
+  }
+};
+
+export const getAllAssignedSubjectsByUserID = async (req, res) => {
+  try {
+    const { id: user_id } = req.user;
+
+    const subjects = await prisma.subjects.findMany({
+      include: {
+        classroom: true,
+        assigned_subject: true,
+      },
+      where: {
+        assigned_subject: {
+          some: {
+            user_id: user_id,
+          },
+        },
       },
     });
 
@@ -526,5 +558,52 @@ export const removeMember = async (req, res) => {
     res.status(500).json({
       error: "Failed to remove member.",
     });
+  }
+};
+
+export const enrollToSubject = async (req, res) => {
+  try {
+    const { id: user_id } = req.user; // assuming the user id is in the req.user object
+    const { subjectCode } = req.body; // subject code from the URL
+    // Step 1: Check if the subject code is valid
+    const subject = await prisma.subjects.findUnique({
+      where: { code: subjectCode },
+    });
+
+    if (!subject) {
+      return res.status(404).json({ error: "Subject not found." });
+    }
+
+    // Step 2: Check if the user is already assigned to the subject
+    const existingAssignment = await prisma.assigned_subject.findUnique({
+      where: {
+        user_id_subject_id: {
+          user_id,
+          subject_id: subject.id,
+        },
+      },
+    });
+
+    if (existingAssignment) {
+      return res
+        .status(400)
+        .json({ error: "User is already assigned to this subject." });
+    }
+
+    // Step 3: Assign the user to the subject if not already assigned
+    const newAssignment = await prisma.assigned_subject.create({
+      data: {
+        user_id,
+        subject_id: subject.id,
+      },
+    });
+
+    return res.json({
+      message: "Successfully enrolled to the subject.",
+      assignment: newAssignment,
+    });
+  } catch (error) {
+    console.error("Error joining Subject:", error);
+    return res.status(500).json({ error: "Failed to join subject." });
   }
 };

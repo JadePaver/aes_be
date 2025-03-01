@@ -8,6 +8,7 @@ export async function seedArchive() {
       { code: "CODEABCDE", user_id: null },
       { code: "CODEFGHIJ", user_id: null },
       { code: "CODEKLMNO", user_id: null },
+      { code: "CODE37424", user_id: null },
     ],
   });
 }

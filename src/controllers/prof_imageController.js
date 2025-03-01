@@ -57,7 +57,6 @@ export const uploadImageHandler = async (req, res) => {
       id: user.id,
       username: user.username,
       role: user.role_id,
-      profileImage: user.profile_image.file, // Use updated profile image filename
     };
 
     // Sign new token
@@ -65,10 +64,23 @@ export const uploadImageHandler = async (req, res) => {
       expiresIn: "1h",
     });
 
+    const filePath = path.resolve("uploads", newFilename);
+
+    if (!fs.existsSync(filePath)) {
+      console.error("File not found:", filePath);
+      return {
+        ...file,
+        error: "File not found",
+      };
+    }
+
+    const fileBuffer = fs.readFileSync(filePath);
+    const fileBase64 = fileBuffer.toString("base64");
+
     res.status(200).json({
       message: "Profile image uploaded and token updated successfully",
       newToken, // Return the new token to the client
-      imagePath: newFilename,
+      fileBase64: fileBase64,
     });
   } catch (error) {
     console.error("Error uploading image:", error);
@@ -90,4 +102,39 @@ export const serveImage = (req, res) => {
       res.status(500).json({ error: "Error sending file" });
     }
   });
+};
+
+export const getByID = async (req, res) => {
+  try {
+    const { id: user_id } = req.user;
+
+    const userData = await prisma.users.findUnique({
+      where: { id: parseInt(user_id) },
+      include: { profile_image: true },
+    });
+
+
+    let data;
+    if (userData?.profile_image?.file) {
+      const filePath = path.resolve("uploads", userData.profile_image.file);
+
+      if (!fs.existsSync(filePath)) {
+        console.error("File not found:", filePath);
+        return {
+          ...file,
+          error: "File not found",
+        };
+      }
+
+      const fileBuffer = fs.readFileSync(filePath);
+      const fileBase64 = fileBuffer.toString("base64");
+
+      data = fileBase64;
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error("Error getting image:", error);
+    res.status(500).json({ error: "Failed to upload image" });
+  }
 };

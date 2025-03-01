@@ -66,10 +66,6 @@ export const addMember = async (req, res) => {
     const { user_code } = req.params;
     const { id: class_id } = req.body;
 
-    console.log("params:", req.params);
-    console.log("body:", req.body);
-    console.log("class:", class_id);
-
     const archiveCodeRecord = await prisma.archive_codes.findUnique({
       where: { code: user_code },
       select: { user_id: true },
@@ -123,7 +119,6 @@ export const addMember = async (req, res) => {
 export const removeMember = async (req, res) => {
   try {
     const { user_id } = req.params;
-    console.log("user_id_remove:", user_id);
 
     const updatedAssignment = await prisma.assigned_classroom.update({
       where: {
@@ -146,7 +141,6 @@ export const removeMember = async (req, res) => {
       },
     });
 
-    console.log("updatedAssignment:", updatedAssignment);
     res.send({
       message: `${user.fName} ${user.lName} unassigned from classroom successfully.`,
     });
@@ -215,6 +209,40 @@ export const getAllActive = async (req, res) => {
         _count: {
           select: {
             assignedClassroom: true,
+          },
+        },
+      },
+    });
+
+    const result = classrooms.map((classroom) => ({
+      ...classroom,
+      totalUsers: classroom._count.assignedClassroom,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch classrooms" });
+  }
+};
+
+export const getByUserId = async (req, res) => {
+  try {
+    const { id: user_id, role } = req.user;
+
+    const classrooms = await prisma.classrooms.findMany({
+      where: {
+        isRemoved: 0,
+        assignedClassroom: {
+          some: {
+            user_id, // Filter classrooms where the user is assigned
+          },
+        },
+      },
+      include: {
+        _count: {
+          select: {
+            assignedClassroom: true, // Include count of assigned users
           },
         },
       },
